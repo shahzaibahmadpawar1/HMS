@@ -1,7 +1,12 @@
+'use client';
+
+import { useActionState } from 'react';
 import { login } from '@/app/actions/auth';
 import { Button } from '@/components/ui/button';
 
 export default function LoginPage() {
+  const [state, formAction, pending] = useActionState(login, null);
+
   return (
     <div className="flex items-center justify-center min-h-screen bg-slate-100 dark:bg-slate-900">
       <div className="w-full max-w-md p-8 space-y-6 bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700">
@@ -10,7 +15,13 @@ export default function LoginPage() {
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">Sign in to manage patient consultations</p>
         </div>
         
-        <form action={login} className="space-y-4">
+        <form action={formAction} className="space-y-4">
+          {state?.error && (
+            <div className="p-3 text-sm text-red-500 bg-red-100 rounded-md border border-red-200">
+              {state.error}
+            </div>
+          )}
+
           <div className="space-y-2">
             <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-slate-700 dark:text-slate-300">
               Username
@@ -36,8 +47,8 @@ export default function LoginPage() {
             />
           </div>
           
-          <Button type="submit" className="w-full">
-            Sign In
+          <Button type="submit" className="w-full" disabled={pending}>
+            {pending ? 'Signing In...' : 'Sign In'}
           </Button>
         </form>
       </div>
