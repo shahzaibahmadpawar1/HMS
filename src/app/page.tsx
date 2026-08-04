@@ -25,9 +25,11 @@ export default async function Home() {
         </div>
         
         <div className="flex items-center gap-4">
-          <Button variant="ghost" className="text-slate-600 dark:text-slate-300 gap-2">
-            <Settings className="h-4 w-4" /> Master Data
-          </Button>
+          <Link href="/master-data">
+            <Button variant="ghost" className="text-slate-600 dark:text-slate-300 gap-2">
+              <Settings className="h-4 w-4" /> Master Data
+            </Button>
+          </Link>
           <form action={logout}>
             <Button variant="outline" className="text-slate-600 dark:text-slate-300 gap-2" type="submit">
               <LogOut className="h-4 w-4" /> Sign Out
@@ -101,11 +103,18 @@ export default async function Home() {
                         {patient.phone || '-'}
                       </td>
                       <td className="px-6 py-4 text-right">
-                        <Link href={`/patient/${patient.id}`}>
-                          <Button variant="outline" size="sm" className="gap-2">
-                            <FileText className="h-4 w-4" /> Start Visit
-                          </Button>
-                        </Link>
+                        <div className="flex justify-end gap-2">
+                          <Link href={`/patient/${patient.id}/edit`}>
+                            <Button variant="ghost" size="sm" className="gap-2 text-slate-500 hover:text-amber-600">
+                              Edit
+                            </Button>
+                          </Link>
+                          <Link href={`/patient/${patient.id}`}>
+                            <Button variant="outline" size="sm" className="gap-2">
+                              <FileText className="h-4 w-4" /> Start Visit
+                            </Button>
+                          </Link>
+                        </div>
                       </td>
                     </tr>
                   ))

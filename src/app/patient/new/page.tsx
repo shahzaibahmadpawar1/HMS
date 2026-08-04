@@ -4,6 +4,7 @@ import { ArrowLeft, Save } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { PhoneInput } from "@/components/ui/phone-input";
 
 async function addPatient(formData: FormData) {
   'use server';
@@ -79,7 +80,7 @@ export default function NewPatientPage() {
 
             <div className="space-y-2">
               <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Phone Number</label>
-              <Input name="phone" type="tel" placeholder="e.g. 0300-1234567" />
+              <PhoneInput name="phone" />
             </div>
             
             <div className="space-y-2">
