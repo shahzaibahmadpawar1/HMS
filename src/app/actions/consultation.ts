@@ -64,6 +64,7 @@ export async function saveVisit(visitData: any) {
     const medsToInsert = visitData.medications.map((med: any) => ({
       visit_id: visitId,
       medicine_id: med.medicine_id,
+      route: med.route,
       dose: med.dose,
       frequency: med.frequency,
       duration_days: med.duration_days
@@ -75,4 +76,52 @@ export async function saveVisit(visitData: any) {
   
   // Return success so the client component can redirect
   return { success: true };
+}
+
+export async function getPatientVisits(patientId: string) {
+  const { data, error } = await supabase
+    .from('visits')
+    .select('*, doctor:users(username)')
+    .eq('patient_id', patientId)
+    .order('visit_date', { ascending: false });
+
+  if (error) {
+    console.error('Failed to fetch patient visits:', error);
+    return [];
+  }
+  return data || [];
+}
+
+export async function getFullVisitDetails(visitId: string) {
+  const { data: visit, error: visitError } = await supabase
+    .from('visits')
+    .select('*')
+    .eq('id', visitId)
+    .single();
+
+  if (visitError || !visit) return null;
+
+  // Fetch related data
+  const [
+    { data: complaints },
+    { data: diagnoses },
+    { data: medications }
+  ] = await Promise.all([
+    supabase.from('visit_complaints').select('complaint:master_complaints(*)').eq('visit_id', visitId),
+    supabase.from('visit_diagnoses').select('diagnosis:master_diagnoses(*)').eq('visit_id', visitId),
+    supabase.from('visit_medications').select('medicine:master_medicines(*), route, dose, frequency, duration_days').eq('visit_id', visitId)
+  ]);
+
+  return {
+    ...visit,
+    complaints: complaints?.map(c => c.complaint) || [],
+    diagnoses: diagnoses?.map(d => d.diagnosis) || [],
+    medications: medications?.map(m => ({
+      ...m.medicine,
+      route: m.route,
+      dose: m.dose,
+      frequency: m.frequency,
+      duration: m.duration_days
+    })) || []
+  };
 }

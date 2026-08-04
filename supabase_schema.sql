@@ -115,6 +115,7 @@ CREATE TABLE IF NOT EXISTS public.visit_medications (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     visit_id UUID REFERENCES public.visits(id) ON DELETE CASCADE,
     medicine_id UUID REFERENCES public.master_medicines(id) ON DELETE RESTRICT,
+    route TEXT,
     dose TEXT,
     frequency TEXT,
     when_to_take TEXT,
