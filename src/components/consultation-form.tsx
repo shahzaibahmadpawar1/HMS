@@ -421,8 +421,8 @@ export function ConsultationForm({
           </div>
           <div className="text-right">
             <p className="text-sm font-bold">MRN: {patient.patient_mrn}</p>
-            <p className="text-sm">Date: {new Date().toLocaleDateString()}</p>
-            <p className="text-sm">Time: {new Date().toLocaleTimeString()}</p>
+            <p className="text-sm" suppressHydrationWarning>Date: {new Date().toLocaleDateString()}</p>
+            <p className="text-sm" suppressHydrationWarning>Time: {new Date().toLocaleTimeString()}</p>
           </div>
         </div>
 

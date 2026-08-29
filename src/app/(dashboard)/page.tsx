@@ -1,9 +1,8 @@
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { UserPlus, Search, Calendar, FileText, Settings, LogOut } from "lucide-react";
+import { UserPlus, Search, FileText } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { logout } from "./actions/auth";
 import * as motion from "framer-motion/client";
 
 export const revalidate = 0; // Disable caching for dashboard
@@ -16,38 +15,7 @@ export default async function Home() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      {/* Top Navigation */}
-      <header className="glass-header px-6 py-4 flex justify-between items-center sticky top-0 z-30">
-        <motion.div 
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.5 }}
-          className="flex items-center gap-2 text-emerald-600 dark:text-emerald-500"
-        >
-          <div className="bg-emerald-100 dark:bg-emerald-900/40 p-2.5 rounded-xl premium-shadow">
-            <Calendar className="h-6 w-6" />
-          </div>
-          <h1 className="text-xl font-bold text-slate-800 dark:text-white ml-2 tracking-tight">Clinic HMS</h1>
-        </motion.div>
-        
-        <motion.div 
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.5 }}
-          className="flex items-center gap-4"
-        >
-          <Link href="/master-data">
-            <Button variant="ghost" className="text-slate-600 dark:text-slate-300 gap-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-all">
-              <Settings className="h-4 w-4" /> Master Data
-            </Button>
-          </Link>
-          <form action={logout}>
-            <Button variant="outline" className="text-slate-600 dark:text-slate-300 gap-2 rounded-full border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all" type="submit">
-              <LogOut className="h-4 w-4" /> Sign Out
-            </Button>
-          </form>
-        </motion.div>
-      </header>
+
 
       {/* Main Content */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-6 lg:p-8 flex flex-col gap-8 relative z-10">
