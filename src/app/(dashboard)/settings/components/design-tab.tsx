@@ -15,7 +15,7 @@ export default function DesignTab({ initialData }: { initialData: any }) {
     {
       id: 'Classic',
       name: 'Classic',
-      desc: 'The design OPDPRO prints today — copper tones, explicit labels, traditional header.',
+      desc: 'The design CareNexus prints today — copper tones, explicit labels, traditional header.',
       color: 'bg-orange-50'
     },
     {

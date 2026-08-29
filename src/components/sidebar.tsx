@@ -92,7 +92,7 @@ export function Sidebar() {
         <div className="bg-slate-200 text-slate-600 rounded-full p-1.5 flex items-center justify-center">
           <Infinity className="w-6 h-6" />
         </div>
-        <span className="font-bold text-xl tracking-wide text-slate-800 dark:text-slate-100 uppercase">OPDPRO</span>
+        <span className="font-bold text-xl tracking-wide text-slate-800 dark:text-slate-100 uppercase">CareNexus</span>
       </div>
 
       {/* Navigation */}
