@@ -29,7 +29,15 @@ export function Sidebar() {
 
   const isCurrent = (path: string) => pathname === path || pathname.startsWith(path + '/');
 
-  const navItems = [
+  type NavItem = {
+    name: string;
+    href: string;
+    icon: React.ElementType;
+    exact?: boolean;
+    actionBtn?: boolean;
+  };
+
+  const navItems: { group: string; items: NavItem[] }[] = [
     {
       group: 'OVERVIEW',
       items: [

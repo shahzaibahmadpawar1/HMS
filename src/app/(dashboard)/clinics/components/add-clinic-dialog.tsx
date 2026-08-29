@@ -14,9 +14,9 @@ import { cn } from '@/lib/utils';
 const clinicSchema = z.object({
   name: z.string().min(1, 'Clinic name is required'),
   phone: z.string().optional(),
-  consult_fee: z.coerce.number().min(0).default(500),
+  consult_fee: z.coerce.number().min(0),
   address: z.string().optional(),
-  doctor_share: z.number().min(0).max(100).default(70),
+  doctor_share: z.number().min(0).max(100),
 });
 
 type ClinicFormValues = z.infer<typeof clinicSchema>;
@@ -60,7 +60,7 @@ export function AddClinicDialog({ trigger }: AddClinicDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
+      {trigger && <DialogTrigger render={trigger as React.ReactElement} />}
       <DialogContent className="max-w-md bg-white dark:bg-slate-900 border-none shadow-2xl p-0 gap-0 overflow-hidden sm:max-w-lg">
         <div className="p-6 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800">
           <DialogTitle className="text-xl font-semibold text-slate-800 dark:text-slate-100">Add Clinic / Hospital</DialogTitle>
