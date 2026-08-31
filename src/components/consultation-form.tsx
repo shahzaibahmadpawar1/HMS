@@ -225,7 +225,7 @@ export function ConsultationForm({
             </div>
             <div className="bg-slate-50 dark:bg-slate-900/50 p-3 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm">
               <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Date of Birth</div>
-              <div className="font-bold text-slate-900 dark:text-white">{patient.dob ? new Date(patient.dob).toLocaleDateString() : '-'}</div>
+              <div className="font-bold text-slate-900 dark:text-white" suppressHydrationWarning>{patient.dob ? new Date(patient.dob).toLocaleDateString() : '-'}</div>
             </div>
             <div className="bg-slate-50 dark:bg-slate-900/50 p-3 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm">
               <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Allergies</div>
@@ -235,7 +235,7 @@ export function ConsultationForm({
             {/* Extra Metadata Row */}
             <div className="bg-indigo-50 dark:bg-indigo-900/20 p-3 rounded-xl border border-indigo-100 dark:border-indigo-800/30 shadow-sm text-indigo-900 dark:text-indigo-200 col-span-1">
               <div className="text-[10px] font-bold uppercase tracking-wider mb-1 opacity-70">Visit Date</div>
-              <div className="font-bold">{new Date().toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}</div>
+              <div className="font-bold" suppressHydrationWarning>{new Date().toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}</div>
             </div>
             <div className="bg-slate-50 dark:bg-slate-900/50 p-3 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm">
               <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Visit Time</div>
