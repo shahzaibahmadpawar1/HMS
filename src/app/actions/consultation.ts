@@ -119,7 +119,8 @@ export async function getFullVisitDetails(visitId: string) {
   const [
     { data: complaints },
     { data: diagnoses },
-    { data: medications }
+    { data: medications },
+    { data: investigations }
   ] = await Promise.all([
     supabase.from('visit_complaints').select('complaint:master_complaints(*)').eq('visit_id', visitId),
     supabase.from('visit_diagnoses').select('diagnosis:master_diagnoses(*)').eq('visit_id', visitId),
@@ -138,6 +139,6 @@ export async function getFullVisitDetails(visitId: string) {
       frequency: m.frequency,
       duration: m.duration_days
     })) || [],
-    investigations: investigations?.map(i => i.service) || []
+    investigations: investigations?.map((i: any) => i.service) || []
   };
 }
