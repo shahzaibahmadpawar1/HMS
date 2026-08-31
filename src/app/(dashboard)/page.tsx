@@ -122,13 +122,18 @@ export default async function Home() {
                       <td className="px-6 py-5 text-right">
                         <div className="flex justify-end gap-3 opacity-80 group-hover:opacity-100 transition-opacity">
                           <Link href={`/patient/${patient.id}/edit`}>
-                            <Button variant="ghost" size="sm" className="gap-2 text-slate-500 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-full transition-all">
+                            <Button variant="ghost" size="sm" className="gap-2 text-slate-500 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-full transition-all px-4">
                               Edit
                             </Button>
                           </Link>
                           <Link href={`/patient/${patient.id}`}>
-                            <Button variant="outline" size="sm" className="gap-2 rounded-full border-emerald-200 dark:border-emerald-800 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 transition-all">
+                            <Button variant="outline" size="sm" className="gap-2 rounded-full border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 transition-all px-4">
                               <FileText className="h-4 w-4" /> Patient Profile
+                            </Button>
+                          </Link>
+                          <Link href={`/patient/${patient.id}/consultation`}>
+                            <Button size="sm" className="gap-2 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white premium-shadow-hover transition-all px-4">
+                              <UserPlus className="h-4 w-4" /> Visit
                             </Button>
                           </Link>
                         </div>

@@ -28,6 +28,11 @@ export async function saveVisit(visitData: any) {
       clinical_history: visitData.notes.clinical_history,
       physician_note: visitData.notes.physician_note,
       reports_findings: visitData.notes.reports_findings,
+      advice_instructions: visitData.notes.advice,
+      plan: visitData.notes.plan,
+
+      next_visit_days: visitData.followUp?.value,
+      next_visit_frequency: visitData.followUp?.unit,
       
       status: 'completed'
     })
@@ -72,6 +77,15 @@ export async function saveVisit(visitData: any) {
     await supabase.from('visit_medications').insert(medsToInsert);
   }
 
+  // 5. Insert Investigations
+  if (visitData.investigations && visitData.investigations.length > 0) {
+    const invsToInsert = visitData.investigations.map((iId: string) => ({
+      visit_id: visitId,
+      service_id: iId
+    }));
+    await supabase.from('visit_investigations').insert(invsToInsert);
+  }
+
   revalidatePath('/'); // refresh dashboard list if needed
   
   // Return success so the client component can redirect
@@ -109,7 +123,8 @@ export async function getFullVisitDetails(visitId: string) {
   ] = await Promise.all([
     supabase.from('visit_complaints').select('complaint:master_complaints(*)').eq('visit_id', visitId),
     supabase.from('visit_diagnoses').select('diagnosis:master_diagnoses(*)').eq('visit_id', visitId),
-    supabase.from('visit_medications').select('medicine:master_medicines(*), route, dose, frequency, duration_days').eq('visit_id', visitId)
+    supabase.from('visit_medications').select('medicine:master_medicines(*), route, dose, frequency, duration_days').eq('visit_id', visitId),
+    supabase.from('visit_investigations').select('service:master_services(*)').eq('visit_id', visitId)
   ]);
 
   return {
@@ -122,6 +137,7 @@ export async function getFullVisitDetails(visitId: string) {
       dose: m.dose,
       frequency: m.frequency,
       duration: m.duration_days
-    })) || []
+    })) || [],
+    investigations: investigations?.map(i => i.service) || []
   };
 }

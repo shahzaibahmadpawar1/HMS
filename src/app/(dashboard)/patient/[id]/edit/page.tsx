@@ -5,6 +5,7 @@ import Link from "next/link";
 import { redirect, notFound } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { PhoneInput } from "@/components/ui/phone-input";
+import { CnicInput } from "@/components/ui/cnic-input";
 
 export default async function EditPatientPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = await params;
@@ -31,6 +32,12 @@ export default async function EditPatientPage({ params }: { params: Promise<{ id
     const phone = formData.get('phone') as string;
     const address = formData.get('address') as string;
 
+    const email = formData.get('email') as string;
+    const cnic = formData.get('cnic') as string;
+    const blood_group = formData.get('blood_group') as string;
+    const allergies = formData.get('allergies') as string;
+    const notes = formData.get('notes') as string;
+
     const { error } = await supabase
       .from('patients')
       .update({
@@ -38,7 +45,12 @@ export default async function EditPatientPage({ params }: { params: Promise<{ id
         dob: dob || null,
         gender,
         phone,
-        address
+        address,
+        email,
+        cnic,
+        blood_group,
+        allergies,
+        notes
       })
       .eq('id', patientId);
 
@@ -93,13 +105,43 @@ export default async function EditPatientPage({ params }: { params: Promise<{ id
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Phone Number</label>
+              <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Phone</label>
               <PhoneInput name="phone" defaultValue={patient.phone || ''} />
             </div>
             
             <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Address</label>
-              <Input name="address" defaultValue={patient.address || ''} placeholder="Full residential address" />
+              <label className="text-sm font-medium text-slate-700 dark:text-slate-300">CNIC</label>
+              <CnicInput name="cnic" defaultValue={patient.cnic || ''} />
+            </div>
+            
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Email</label>
+              <Input name="email" type="email" defaultValue={patient.email || ''} placeholder="patient@email.com" />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Blood Group</label>
+              <select name="blood_group" defaultValue={patient.blood_group || 'Unknown'} className="flex h-10 w-full rounded-md border border-slate-300 bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400 focus:border-transparent dark:border-slate-700 dark:text-slate-50">
+                <option value="Unknown">Unknown</option>
+                <option value="A+">A+</option>
+                <option value="A-">A-</option>
+                <option value="B+">B+</option>
+                <option value="B-">B-</option>
+                <option value="AB+">AB+</option>
+                <option value="AB-">AB-</option>
+                <option value="O+">O+</option>
+                <option value="O-">O-</option>
+              </select>
+            </div>
+            
+            <div className="col-span-1 md:col-span-2 space-y-2">
+              <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Allergies</label>
+              <Input name="allergies" defaultValue={patient.allergies || ''} placeholder="Known drug/food allergies" />
+            </div>
+            
+            <div className="col-span-1 md:col-span-2 space-y-2">
+              <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Notes</label>
+              <textarea name="notes" defaultValue={patient.notes || ''} rows={4} className="flex w-full rounded-md border border-slate-300 bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400 focus:border-transparent dark:border-slate-700 dark:text-slate-50 resize-y" placeholder="Additional notes..."></textarea>
             </div>
           </div>
 

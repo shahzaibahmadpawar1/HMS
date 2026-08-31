@@ -1,6 +1,7 @@
 import { getClinics } from '@/app/actions/clinics';
 import { AddClinicDialog } from './components/add-clinic-dialog';
 import { Building, Building2, Trash2, LogOut, Edit } from 'lucide-react';
+import { ClinicCardActions } from './components/clinic-card-actions';
 import { Button } from '@/components/ui/button';
 
 export const dynamic = 'force-dynamic'; // Ensure we fetch fresh data
@@ -71,17 +72,7 @@ export default async function ClinicsPage() {
                 </div>
               </div>
               
-              <div className="mt-6 pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-2">
-                <Button variant="ghost" size="sm" className="text-slate-500 hover:text-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 h-9 px-3">
-                  <Edit className="w-4 h-4 mr-1.5" /> Edit
-                </Button>
-                <Button variant="ghost" size="sm" className="text-slate-500 hover:text-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 h-9 px-3">
-                  <LogOut className="w-4 h-4 mr-1.5" /> Leave
-                </Button>
-                <Button variant="outline" size="sm" className="text-red-500 border-red-200 hover:bg-red-50 hover:text-red-600 h-9 px-3">
-                  <Trash2 className="w-4 h-4 mr-1.5" /> Delete
-                </Button>
-              </div>
+              <ClinicCardActions clinic={clinic} />
             </div>
           ))}
         </div>

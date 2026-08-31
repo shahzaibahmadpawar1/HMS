@@ -7,13 +7,13 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { createClinic } from '@/app/actions/clinics';
+import { createClinic, updateClinic } from '@/app/actions/clinics';
 import { Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const clinicSchema = z.object({
   name: z.string().min(1, 'Clinic name is required'),
-  phone: z.string().optional(),
+  phone: z.string().regex(/^03\d{2}-\d{7}$/, 'Format must be 03xx-xxxxxxx').optional().or(z.literal('')),
   consult_fee: z.coerce.number().min(0),
   address: z.string().optional(),
   doctor_share: z.number().min(0).max(100),
@@ -23,33 +23,39 @@ type ClinicFormValues = z.infer<typeof clinicSchema>;
 
 interface AddClinicDialogProps {
   trigger?: React.ReactNode;
+  clinic?: any;
 }
 
-export function AddClinicDialog({ trigger }: AddClinicDialogProps) {
+export function AddClinicDialog({ trigger, clinic }: AddClinicDialogProps) {
   const [open, setOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const isEditing = !!clinic;
 
   const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<ClinicFormValues>({
     resolver: zodResolver(clinicSchema),
     defaultValues: {
-      name: '',
-      phone: '',
-      consult_fee: 500,
-      address: '',
-      doctor_share: 70,
+      name: clinic?.name || '',
+      phone: clinic?.phone || '',
+      consult_fee: clinic?.consult_fee ?? 500,
+      address: clinic?.address || '',
+      doctor_share: clinic?.doctor_share ?? 70,
     }
   });
 
   const doctorShare = watch('doctor_share');
 
   const onSubmit = async (data: ClinicFormValues) => {
+    if (!window.confirm(`Are you sure you want to ${isEditing ? 'update' : 'create'} this clinic? This cannot be undone.`)) {
+      return;
+    }
+    
     setIsSubmitting(true);
     try {
-      const result = await createClinic(data);
+      const result = isEditing ? await updateClinic(clinic.id, data) : await createClinic(data);
       if (result.success) {
         setOpen(false);
       } else {
-        console.error('Failed to create clinic:', result.error);
+        console.error(`Failed to ${isEditing ? 'update' : 'create'} clinic:`, result.error);
       }
     } catch (error) {
       console.error(error);
@@ -63,7 +69,9 @@ export function AddClinicDialog({ trigger }: AddClinicDialogProps) {
       {trigger && <DialogTrigger render={trigger as React.ReactElement} />}
       <DialogContent className="max-w-md bg-white dark:bg-slate-900 border-none shadow-2xl p-0 gap-0 overflow-hidden sm:max-w-lg">
         <div className="p-6 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800">
-          <DialogTitle className="text-xl font-semibold text-slate-800 dark:text-slate-100">Add Clinic / Hospital</DialogTitle>
+          <DialogTitle className="text-xl font-semibold text-slate-800 dark:text-slate-100">
+            {isEditing ? 'Edit Clinic / Hospital' : 'Add Clinic / Hospital'}
+          </DialogTitle>
           <DialogDescription className="text-slate-500 dark:text-slate-400 mt-1">
             Configure your OPD settings for this location
           </DialogDescription>
@@ -86,9 +94,17 @@ export function AddClinicDialog({ trigger }: AddClinicDialogProps) {
                 <label className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1 block">Phone</label>
                 <Input 
                   {...register('phone')} 
-                  placeholder="+92 21 0000000" 
+                  onChange={(e) => {
+                    let val = e.target.value.replace(/[^0-9]/g, '');
+                    if (val.length > 11) val = val.substring(0, 11);
+                    if (val.length > 4) val = val.substring(0, 4) + '-' + val.substring(4);
+                    e.target.value = val;
+                    setValue('phone', val, { shouldValidate: true });
+                  }}
+                  placeholder="03xx-xxxxxxx" 
                   className="bg-slate-100/50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 h-11"
                 />
+                {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone.message}</p>}
               </div>
               <div>
                 <label className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1 block">Default Consult Fee (Rs)</label>
@@ -155,8 +171,8 @@ export function AddClinicDialog({ trigger }: AddClinicDialogProps) {
               disabled={isSubmitting}
               className="bg-indigo-500 hover:bg-indigo-600 text-white border-0"
             >
-              {isSubmitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <span className="mr-2">+</span>}
-              Add Clinic
+              {isSubmitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : (!isEditing && <span className="mr-2">+</span>)}
+              {isEditing ? 'Save Changes' : 'Add Clinic'}
             </Button>
           </div>
         </form>
