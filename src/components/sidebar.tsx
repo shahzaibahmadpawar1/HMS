@@ -42,24 +42,19 @@ export function Sidebar() {
       group: 'OVERVIEW',
       items: [
         { name: 'Dashboard', href: '/', icon: Home, exact: true },
-        { name: 'Refer & Earn', href: '#', icon: Gift },
       ]
     },
     {
       group: 'PATIENTS',
       items: [
-        { name: 'Patients', href: '/', icon: Users }, // Typically this would be /patients, but in this app the home is the patients directory
+        { name: 'Patients', href: '/patients', icon: Users },
         { name: 'Visits', href: '#', icon: Stethoscope },
-        { name: 'Prescriptions', href: '#', icon: Paperclip },
       ]
     },
     {
       group: 'FINANCE',
       items: [
-        { name: 'Accounting', href: '#', icon: BarChart2 },
-        { name: 'Reports', href: '#', icon: TrendingUp },
-        { name: 'Expenses', href: '#', icon: Receipt },
-        { name: 'Tax Calculator', href: '#', icon: FileText },
+        { name: 'Expenses', href: '/expenses', icon: Receipt },
       ]
     },
     {
