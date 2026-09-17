@@ -24,6 +24,12 @@ export async function saveVisit(visitData: any) {
       has_ihd_htn: visitData.checkboxes.htn,
       has_hepatitis: visitData.checkboxes.hepatitis,
       has_asthma: visitData.checkboxes.asthma,
+      has_ckd: visitData.checkboxes.ckd,
+      has_thyroid: visitData.checkboxes.thyroid,
+      other_comorbidities: visitData.checkboxes.other,
+      
+      previous_lab_findings: visitData.labFindings,
+      previous_radiological_findings: visitData.radiologicalFindings,
       
       clinical_history: visitData.notes.clinical_history,
       physician_note: visitData.notes.physician_note,

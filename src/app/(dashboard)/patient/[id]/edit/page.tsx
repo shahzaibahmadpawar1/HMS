@@ -93,7 +93,7 @@ export default async function EditPatientPage({ params }: { params: Promise<{ id
             
             <div className="space-y-2">
               <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Date of Birth</label>
-              <Input name="dob" defaultValue={patient.dob || ''} type="date" max={new Date().toISOString().split('T')[0]} required className="flex h-10 w-full rounded-md border border-slate-300 bg-transparent px-3 py-2 text-sm" />
+              <Input name="dob" defaultValue={patient.dob || ''} type="date" max={new Date().toISOString().split('T')[0]} className="flex h-10 w-full rounded-md border border-slate-300 bg-transparent px-3 py-2 text-sm" />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Gender</label>

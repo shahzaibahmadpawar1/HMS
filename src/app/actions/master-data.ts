@@ -43,3 +43,24 @@ export async function deleteMedicine(formData: FormData) {
   await supabase.from('master_medicines').delete().eq('id', id);
   revalidatePath('/master-data');
 }
+
+export async function addServiceOnTheFly(name: string) {
+  if (!name) return null;
+  const { data, error } = await supabase
+    .from('master_services')
+    .insert({ name, category: 'Investigation' })
+    .select('*')
+    .single();
+    
+  if (error) {
+    console.error('Error adding custom investigation:', error);
+    return null;
+  }
+  
+  // Revalidate paths that might use this list
+  revalidatePath('/');
+  revalidatePath('/patient/new');
+  
+  return data;
+}
+

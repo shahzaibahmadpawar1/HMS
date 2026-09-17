@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { History, Trash2, Plus, Printer, Save, FileText, Check, ChevronDown, Share2, FileBarChart, Download, ArrowLeft } from "lucide-react";
 import { saveVisit } from "@/app/actions/consultation";
+import { addServiceOnTheFly } from "@/app/actions/master-data";
 import { useRouter } from "next/navigation";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { motion, AnimatePresence } from "framer-motion";
@@ -30,7 +31,7 @@ export function ConsultationForm({
 }) {
   const router = useRouter();
   const [isSaving, setIsSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState("history");
+  const [activeTab, setActiveTab] = useState("patient_info");
   
   // Modal states
   const [isAddMedicineOpen, setIsAddMedicineOpen] = useState(false);
@@ -52,7 +53,8 @@ export function ConsultationForm({
     reports_findings: initialVisitData?.reports_findings || '', // Examination
     physician_note: initialVisitData?.physician_note || '', // Assessment
     plan: initialVisitData?.plan || '',
-    advice: initialVisitData?.advice_instructions || ''
+    advice: initialVisitData?.advice_instructions || '',
+    radiological_findings: initialVisitData?.previous_radiological_findings || ''
   });
   
   const [followUp, setFollowUp] = useState({
@@ -60,16 +62,55 @@ export function ConsultationForm({
     unit: initialVisitData?.next_visit_frequency || 'Days'
   });
 
+  // Comorbidities
+  const [comorbidities, setComorbidities] = useState({
+    diabetes: initialVisitData?.has_diabetes || false,
+    htn: initialVisitData?.has_ihd_htn || false,
+    hepatitis: initialVisitData?.has_hepatitis || false,
+    asthma: initialVisitData?.has_asthma || false,
+    ckd: initialVisitData?.has_ckd || false,
+    thyroid: initialVisitData?.has_thyroid || false,
+    other: initialVisitData?.other_comorbidities || ''
+  });
+
   // Lists
   const [selectedComplaints, setSelectedComplaints] = useState<any[]>(initialVisitData?.complaints || []);
   const [selectedDiagnoses, setSelectedDiagnoses] = useState<any[]>(initialVisitData?.diagnoses || []);
   const [prescribedMedications, setPrescribedMedications] = useState<any[]>(initialVisitData?.medications || []);
   const [investigations, setInvestigations] = useState<any[]>(initialVisitData?.investigations || []);
+  const [labFindings, setLabFindings] = useState<any[]>(initialVisitData?.previous_lab_findings || []);
 
   // Temporary selection state for adding to lists
   const [currentComplaint, setCurrentComplaint] = useState("");
   const [currentDiagnosis, setCurrentDiagnosis] = useState("");
   const [currentInvestigation, setCurrentInvestigation] = useState("");
+  const [customInvestigationInput, setCustomInvestigationInput] = useState("");
+  const [localMasterServices, setLocalMasterServices] = useState<any[]>(masterServices);
+  const [newLabFinding, setNewLabFinding] = useState({ name: '', flag: 'Normal', value: '', referenceRange: '' });
+  
+  const [adviceSearch, setAdviceSearch] = useState("");
+  const [showAdviceDropdown, setShowAdviceDropdown] = useState(false);
+  const [customAdviceOptions, setCustomAdviceOptions] = useState<string[]>([
+    "Drink plenty of water",
+    "Complete bed rest",
+    "Avoid heavy meals",
+    "Avoid spicy/oily food",
+    "Avoid cold drinks and cold food",
+    "Take light diet",
+    "Avoid prolonged standing",
+    "Avoid stairs",
+    "Avoid heavy lifting",
+    "Apply ice pack on affected area",
+    "Apply warm compress",
+    "Keep wound clean and dry"
+  ]);
+
+  const handleAddLabFinding = () => {
+    if (newLabFinding.name.trim()) {
+      setLabFindings([...labFindings, { ...newLabFinding, id: Date.now().toString() }]);
+      setNewLabFinding({ name: '', flag: 'Normal', value: '', referenceRange: '' });
+    }
+  };
 
   const handleSave = async (printAfter: boolean = false) => {
     setIsSaving(true);
@@ -78,7 +119,7 @@ export function ConsultationForm({
       vitals,
       notes,
       followUp,
-      checkboxes: { diabetes: false, htn: false, hepatitis: false, asthma: false }, // Keeping dummy for backward compatibility if needed
+      checkboxes: comorbidities,
       complaints: selectedComplaints.map(c => c.id),
       diagnoses: selectedDiagnoses.map(d => d.id),
       investigations: investigations.map(i => i.id),
@@ -88,7 +129,9 @@ export function ConsultationForm({
         dose: m.dose,
         frequency: m.frequency,
         duration_days: m.duration
-      }))
+      })),
+      labFindings: labFindings,
+      radiologicalFindings: notes.radiological_findings
     };
 
     const res = await saveVisit(visitData);
@@ -121,12 +164,41 @@ export function ConsultationForm({
     setCurrentDiagnosis("");
   };
   
-  const addInvestigation = () => {
-    const found = masterServices.find(s => s.id === currentInvestigation);
-    if (found && !investigations.find(i => i.id === found.id)) {
-      setInvestigations([...investigations, found]);
+  const addInvestigation = async () => {
+    const found = localMasterServices.find(s => s.id === currentInvestigation);
+    if (found) {
+      if (!investigations.find(i => i.id === found.id)) {
+        setInvestigations([...investigations, found]);
+      }
+      setCurrentInvestigation("");
+      setCustomInvestigationInput("");
+    } else if (customInvestigationInput && customInvestigationInput.trim() !== '') {
+      const trimmedInput = customInvestigationInput.trim();
+      const exists = investigations.find(i => i.name.toLowerCase() === trimmedInput.toLowerCase());
+      if (!exists) {
+        // Optimistically add it
+        const customId = `custom_${Date.now()}`;
+        const tempService = { id: customId, name: trimmedInput };
+        setInvestigations(prev => [...prev, tempService]);
+        
+        setCurrentInvestigation("");
+        setCustomInvestigationInput("");
+        
+        // Save to DB
+        try {
+          const savedService = await addServiceOnTheFly(trimmedInput);
+          if (savedService) {
+            setInvestigations(prev => prev.map(i => i.id === customId ? savedService : i));
+            setLocalMasterServices(prev => [...prev, savedService]);
+          }
+        } catch (err) {
+          console.error("Failed to add service", err);
+        }
+      } else {
+        setCurrentInvestigation("");
+        setCustomInvestigationInput("");
+      }
     }
-    setCurrentInvestigation("");
   };
 
   const handleMedicineAdded = (med: any) => {
@@ -163,9 +235,17 @@ export function ConsultationForm({
             {/* Stepper */}
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-[600px]">
               <TabsList className="w-full flex p-1 bg-transparent justify-between border-b-0 h-auto">
+                <TabsTrigger value="patient_info" className="flex-1 flex flex-col items-start gap-1 p-2 data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-indigo-500 rounded-none border-b-2 border-transparent">
+                  <div className="flex items-center gap-2">
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold border-2 ${activeTab === 'patient_info' ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/30' : 'border-slate-300 text-slate-400'}`}>1</div>
+                    <div className={`font-semibold text-sm ${activeTab === 'patient_info' ? 'text-slate-900 dark:text-white' : 'text-slate-500'}`}>Patient Info</div>
+                  </div>
+                  <div className="text-[10px] text-slate-400 font-medium pl-8">Demographics, Contact, Vitals Overview</div>
+                </TabsTrigger>
+                
                 <TabsTrigger value="history" className="flex-1 flex flex-col items-start gap-1 p-2 data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-emerald-500 rounded-none border-b-2 border-transparent">
                   <div className="flex items-center gap-2">
-                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold border-2 ${activeTab === 'history' ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30' : 'border-slate-300 text-slate-400'}`}>1</div>
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold border-2 ${activeTab === 'history' ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30' : 'border-slate-300 text-slate-400'}`}>2</div>
                     <div className={`font-semibold text-sm ${activeTab === 'history' ? 'text-slate-900 dark:text-white' : 'text-slate-500'}`}>History & Notes</div>
                   </div>
                   <div className="text-[10px] text-slate-400 font-medium pl-8">Presenting Complaint, Diagnosis, Clinical History</div>
@@ -173,7 +253,7 @@ export function ConsultationForm({
                 
                 <TabsTrigger value="examination" className="flex-1 flex flex-col items-start gap-1 p-2 data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-amber-500 rounded-none border-b-2 border-transparent">
                   <div className="flex items-center gap-2">
-                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold border-2 ${activeTab === 'examination' ? 'border-amber-500 text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30' : 'border-slate-300 text-slate-400'}`}>2</div>
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold border-2 ${activeTab === 'examination' ? 'border-amber-500 text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30' : 'border-slate-300 text-slate-400'}`}>3</div>
                     <div className={`font-semibold text-sm ${activeTab === 'examination' ? 'text-slate-900 dark:text-white' : 'text-slate-500'}`}>Examination</div>
                   </div>
                   <div className="text-[10px] text-slate-400 font-medium pl-8">Vitals, Findings, Assessment, Plan & Follow-Up</div>
@@ -181,7 +261,7 @@ export function ConsultationForm({
                 
                 <TabsTrigger value="prescription" className="flex-1 flex flex-col items-start gap-1 p-2 data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-rose-500 rounded-none border-b-2 border-transparent">
                   <div className="flex items-center gap-2">
-                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold border-2 ${activeTab === 'prescription' ? 'border-rose-500 text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/30' : 'border-slate-300 text-slate-400'}`}>3</div>
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold border-2 ${activeTab === 'prescription' ? 'border-rose-500 text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/30' : 'border-slate-300 text-slate-400'}`}>4</div>
                     <div className={`font-semibold text-sm ${activeTab === 'prescription' ? 'text-slate-900 dark:text-white' : 'text-slate-500'}`}>Prescription</div>
                   </div>
                   <div className="text-[10px] text-slate-400 font-medium pl-8">Medications, Investigations & Advice</div>
@@ -192,72 +272,7 @@ export function ConsultationForm({
             <div className="w-[120px]"></div> {/* Spacer */}
           </div>
 
-          {/* Patient Overview Grid */}
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
-            <div className="bg-slate-50 dark:bg-slate-900/50 p-3 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm col-span-1 lg:col-span-2">
-              <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Name of Patient</div>
-              <div className="font-bold text-slate-900 dark:text-white uppercase truncate">{patient.name}</div>
-            </div>
-            <div className="bg-slate-50 dark:bg-slate-900/50 p-3 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm">
-              <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">MRN</div>
-              <div className="font-bold text-indigo-600 dark:text-indigo-400 truncate">{patient.patient_mrn}</div>
-            </div>
-            <div className="bg-slate-50 dark:bg-slate-900/50 p-3 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm">
-              <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Gender</div>
-              <div className="font-bold text-slate-900 dark:text-white capitalize">{patient.gender || '-'}</div>
-            </div>
-            <div className="bg-slate-50 dark:bg-slate-900/50 p-3 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm">
-              <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Age</div>
-              <div className="font-bold text-slate-900 dark:text-white">{age}</div>
-            </div>
-            
-            <div className="bg-slate-50 dark:bg-slate-900/50 p-3 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm">
-              <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Blood Group</div>
-              <div className="font-bold text-slate-900 dark:text-white">{patient.blood_group || '-'}</div>
-            </div>
-            <div className="bg-slate-50 dark:bg-slate-900/50 p-3 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm">
-              <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Phone Number</div>
-              <div className="font-bold text-slate-900 dark:text-white">{patient.phone || '-'}</div>
-            </div>
-            <div className="bg-slate-50 dark:bg-slate-900/50 p-3 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm">
-              <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Address</div>
-              <div className="font-bold text-slate-900 dark:text-white truncate">{patient.address || '-'}</div>
-            </div>
-            <div className="bg-slate-50 dark:bg-slate-900/50 p-3 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm">
-              <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Date of Birth</div>
-              <div className="font-bold text-slate-900 dark:text-white" suppressHydrationWarning>{patient.dob ? new Date(patient.dob).toLocaleDateString() : '-'}</div>
-            </div>
-            <div className="bg-slate-50 dark:bg-slate-900/50 p-3 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm">
-              <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Allergies</div>
-              <div className="font-bold text-rose-500 truncate">{patient.allergies || 'No known allergies'}</div>
-            </div>
-            
-            {/* Extra Metadata Row */}
-            <div className="bg-indigo-50 dark:bg-indigo-900/20 p-3 rounded-xl border border-indigo-100 dark:border-indigo-800/30 shadow-sm text-indigo-900 dark:text-indigo-200 col-span-1">
-              <div className="text-[10px] font-bold uppercase tracking-wider mb-1 opacity-70">Visit Date</div>
-              <div className="font-bold" suppressHydrationWarning>{new Date().toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}</div>
-            </div>
-            <div className="bg-slate-50 dark:bg-slate-900/50 p-3 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm">
-              <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Visit Time</div>
-              <div className="font-bold text-slate-900 dark:text-white" suppressHydrationWarning>{new Date().toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', hour12: true })}</div>
-            </div>
-            <div className="bg-slate-50 dark:bg-slate-900/50 p-3 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm">
-              <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Clinic</div>
-              <div className="font-bold text-slate-900 dark:text-white uppercase">Primary Clinic</div>
-            </div>
-            <div className="bg-slate-50 dark:bg-slate-900/50 p-3 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm">
-              <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Visit Type</div>
-              <div className="font-bold text-slate-900 dark:text-white">OPD Consultation</div>
-            </div>
-            <div className="bg-emerald-50 dark:bg-emerald-900/20 p-3 rounded-xl border border-emerald-200 dark:border-emerald-800/30 shadow-sm flex items-center justify-between">
-              <div>
-                <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold uppercase tracking-wider mb-1">Fee Amount</div>
-                <div className="font-black text-emerald-700 dark:text-emerald-300 text-lg flex items-end gap-1">
-                  <span className="text-xs font-bold mb-1">Rs</span> 500
-                </div>
-              </div>
-            </div>
-          </div>
+
           
         </div>
       </div>
@@ -267,6 +282,84 @@ export function ConsultationForm({
         <div className="max-w-[1400px] mx-auto p-4 lg:p-8">
           
           <AnimatePresence mode="wait">
+            {activeTab === "patient_info" && (
+              <motion.div
+                key="patient_info"
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 10 }}
+                transition={{ duration: 0.2 }}
+                className="space-y-6"
+              >
+                {/* Patient Overview Grid */}
+                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                  <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm col-span-1 lg:col-span-2">
+                    <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Name of Patient</div>
+                    <div className="font-bold text-slate-900 dark:text-white uppercase truncate">{patient.name}</div>
+                  </div>
+                  <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                    <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">MRN</div>
+                    <div className="font-bold text-indigo-600 dark:text-indigo-400 truncate">{patient.patient_mrn}</div>
+                  </div>
+                  <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                    <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Gender</div>
+                    <div className="font-bold text-slate-900 dark:text-white capitalize">{patient.gender || '-'}</div>
+                  </div>
+                  <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                    <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Age</div>
+                    <div className="font-bold text-slate-900 dark:text-white">{age}</div>
+                  </div>
+                  
+                  <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                    <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Blood Group</div>
+                    <div className="font-bold text-slate-900 dark:text-white">{patient.blood_group || '-'}</div>
+                  </div>
+                  <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                    <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Phone Number</div>
+                    <div className="font-bold text-slate-900 dark:text-white">{patient.phone || '-'}</div>
+                  </div>
+                  <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                    <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Address</div>
+                    <div className="font-bold text-slate-900 dark:text-white truncate">{patient.address || '-'}</div>
+                  </div>
+                  <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                    <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Date of Birth</div>
+                    <div className="font-bold text-slate-900 dark:text-white" suppressHydrationWarning>{patient.dob ? new Date(patient.dob).toLocaleDateString() : '-'}</div>
+                  </div>
+                  <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                    <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Allergies</div>
+                    <div className="font-bold text-rose-500 truncate">{patient.allergies || 'No known allergies'}</div>
+                  </div>
+                  
+                  {/* Extra Metadata Row */}
+                  <div className="bg-indigo-50 dark:bg-indigo-900/20 p-4 rounded-xl border border-indigo-100 dark:border-indigo-800/30 shadow-sm text-indigo-900 dark:text-indigo-200 col-span-1">
+                    <div className="text-[10px] font-bold uppercase tracking-wider mb-1 opacity-70">Visit Date</div>
+                    <div className="font-bold" suppressHydrationWarning>{new Date().toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}</div>
+                  </div>
+                  <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                    <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Visit Time</div>
+                    <div className="font-bold text-slate-900 dark:text-white" suppressHydrationWarning>{new Date().toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', hour12: true })}</div>
+                  </div>
+                  <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                    <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Clinic</div>
+                    <div className="font-bold text-slate-900 dark:text-white uppercase">Primary Clinic</div>
+                  </div>
+                  <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                    <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Visit Type</div>
+                    <div className="font-bold text-slate-900 dark:text-white">OPD Consultation</div>
+                  </div>
+                  <div className="bg-emerald-50 dark:bg-emerald-900/20 p-4 rounded-xl border border-emerald-200 dark:border-emerald-800/30 shadow-sm flex items-center justify-between">
+                    <div>
+                      <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold uppercase tracking-wider mb-1">Fee Amount</div>
+                      <div className="font-black text-emerald-700 dark:text-emerald-300 text-lg flex items-end gap-1">
+                        <span className="text-xs font-bold mb-1">Rs</span> 500
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
             {activeTab === "history" && (
               <motion.div
                 key="history"
@@ -336,19 +429,104 @@ export function ConsultationForm({
                       <div className="text-sm text-slate-400 italic">No diagnoses added yet.</div>
                     )}
                   </div>
+
+                  {/* Comorbidities */}
+                  <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-200 dark:border-slate-700">
+                    <h3 className="flex items-center text-sm font-bold text-rose-500 mb-4 uppercase tracking-widest gap-2">
+                      <FileText className="w-4 h-4" /> Comorbidities
+                    </h3>
+                    <div className="flex flex-wrap gap-4">
+                      {['diabetes', 'htn', 'hepatitis', 'asthma', 'ckd', 'thyroid'].map(k => (
+                        <label key={k} className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
+                          <input type="checkbox" className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" checked={(comorbidities as any)[k]} onChange={e => setComorbidities({...comorbidities, [k]: e.target.checked})} />
+                          {k === 'htn' ? 'IHD/HTN' : k === 'hepatitis' ? 'Hepatitis B/C' : k === 'asthma' ? 'Asthma/COPD' : k === 'ckd' ? 'CKD' : k.charAt(0).toUpperCase() + k.slice(1)}
+                        </label>
+                      ))}
+                    </div>
+                    <div className="mt-4">
+                      <Input placeholder="Other disease..." value={comorbidities.other} onChange={e => setComorbidities({...comorbidities, other: e.target.value})} className="bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700" />
+                    </div>
+                  </div>
                 </div>
 
-                {/* Clinical History */}
-                <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col h-full min-h-[400px]">
-                  <h3 className="flex items-center text-sm font-bold text-indigo-500 mb-4 uppercase tracking-widest gap-2">
-                    <History className="w-4 h-4" /> Clinical History
-                  </h3>
-                  <Textarea 
-                    value={notes.clinical_history} 
-                    onChange={e => setNotes({...notes, clinical_history: e.target.value})} 
-                    className="flex-1 resize-none bg-slate-50 dark:bg-slate-900 border-none focus-visible:ring-1 focus-visible:ring-indigo-500 text-base" 
-                    placeholder="Enter detailed clinical history here..."
-                  />
+                <div className="space-y-6 flex flex-col">
+                  {/* Clinical History */}
+                  <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col h-[200px]">
+                    <h3 className="flex items-center text-sm font-bold text-indigo-500 mb-4 uppercase tracking-widest gap-2">
+                      <History className="w-4 h-4" /> Clinical History
+                    </h3>
+                    <Textarea 
+                      value={notes.clinical_history} 
+                      onChange={e => setNotes({...notes, clinical_history: e.target.value})} 
+                      className="flex-1 resize-none bg-slate-50 dark:bg-slate-900 border-none focus-visible:ring-1 focus-visible:ring-indigo-500 text-base" 
+                      placeholder="Enter detailed clinical history here..."
+                    />
+                  </div>
+
+                  {/* Previous Lab Findings */}
+                  <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col">
+                    <h3 className="flex items-center text-sm font-bold text-indigo-500 mb-4 uppercase tracking-widest gap-2">
+                      <FileText className="w-4 h-4" /> Previous Lab Findings
+                    </h3>
+                    <div className="flex flex-col gap-3 mb-4 p-4 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700">
+                      <div className="flex gap-2">
+                        <div className="flex-1">
+                          <label className="text-xs font-semibold text-slate-500 mb-1 block">Lab name *</label>
+                          <Input placeholder="Start typing — e.g. HbA1c, CBC, LFTs" value={newLabFinding.name} onChange={e => setNewLabFinding({...newLabFinding, name: e.target.value})} />
+                        </div>
+                        <div className="w-32">
+                          <label className="text-xs font-semibold text-slate-500 mb-1 block">Flag</label>
+                          <select className="flex h-10 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400 focus:border-transparent dark:border-slate-700 dark:bg-slate-950" value={newLabFinding.flag} onChange={e => setNewLabFinding({...newLabFinding, flag: e.target.value})}>
+                            <option>Normal</option>
+                            <option>High</option>
+                            <option>Low</option>
+                            <option>Critical</option>
+                          </select>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <div className="flex-1">
+                          <label className="text-xs font-semibold text-slate-500 mb-1 block">Value</label>
+                          <Input placeholder="e.g. 8.2 %" value={newLabFinding.value} onChange={e => setNewLabFinding({...newLabFinding, value: e.target.value})} />
+                        </div>
+                        <div className="flex-1">
+                          <label className="text-xs font-semibold text-slate-500 mb-1 block">Reference range</label>
+                          <Input placeholder="e.g. 4 - 6 %" value={newLabFinding.referenceRange} onChange={e => setNewLabFinding({...newLabFinding, referenceRange: e.target.value})} onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), handleAddLabFinding())} />
+                        </div>
+                      </div>
+                      <div className="flex justify-end mt-2">
+                        <Button type="button" size="sm" onClick={handleAddLabFinding} className="bg-indigo-500 hover:bg-indigo-600 text-white">Add Finding</Button>
+                      </div>
+                    </div>
+                    {labFindings.length > 0 ? (
+                      <div className="space-y-2 max-h-[200px] overflow-y-auto">
+                        {labFindings.map(lf => (
+                          <div key={lf.id} className="flex justify-between items-center p-3 bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-slate-100 dark:border-slate-800 text-sm">
+                            <div>
+                              <div className="font-bold text-slate-900 dark:text-white">{lf.name} <span className={`text-xs px-2 py-0.5 rounded-full ${lf.flag === 'Normal' ? 'bg-emerald-100 text-emerald-700' : lf.flag === 'Critical' ? 'bg-rose-100 text-rose-700' : 'bg-amber-100 text-amber-700'}`}>{lf.flag}</span></div>
+                              <div className="text-slate-500 text-xs mt-1">Value: {lf.value || '-'} | Ref: {lf.referenceRange || '-'}</div>
+                            </div>
+                            <button onClick={() => setLabFindings(labFindings.filter(x => x.id !== lf.id))} className="text-slate-400 hover:text-rose-500 transition-colors"><Trash2 className="w-4 h-4" /></button>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-sm text-slate-400 italic">No lab findings added yet.</div>
+                    )}
+                  </div>
+
+                  {/* Previous Radiological Findings */}
+                  <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col">
+                    <h3 className="flex items-center text-sm font-bold text-indigo-500 mb-4 uppercase tracking-widest gap-2">
+                      <FileText className="w-4 h-4" /> Previous Radiological Findings
+                    </h3>
+                    <Textarea 
+                      value={notes.radiological_findings} 
+                      onChange={e => setNotes({...notes, radiological_findings: e.target.value})} 
+                      className="resize-none h-24 bg-slate-50 dark:bg-slate-900 border-none focus-visible:ring-1 focus-visible:ring-indigo-500 text-base" 
+                      placeholder="Enter previous radiological findings here..."
+                    />
+                  </div>
                 </div>
               </motion.div>
             )}
@@ -480,9 +658,10 @@ export function ConsultationForm({
                     <div className="flex gap-2 mb-4">
                       <div className="flex-1">
                         <SearchableSelect 
-                          options={masterServices.map(s => ({ value: s.id, label: s.name }))}
+                          options={localMasterServices.map(s => ({ value: s.id, label: s.name }))}
                           value={currentInvestigation}
                           onChange={val => setCurrentInvestigation(val)}
+                          onInputChange={val => setCustomInvestigationInput(val)}
                           placeholder="Select Investigation"
                         />
                       </div>
@@ -505,11 +684,61 @@ export function ConsultationForm({
                     <h3 className="flex items-center text-sm font-bold text-rose-500 mb-3 uppercase tracking-widest gap-2 border-b border-rose-100 dark:border-rose-900/30 pb-2">
                       <FileText className="w-4 h-4" /> Advice & Instructions
                     </h3>
+                    <div className="relative mb-2">
+                      <div className="relative">
+                        <Input 
+                          placeholder="Search or select advice..." 
+                          value={adviceSearch}
+                          onChange={e => setAdviceSearch(e.target.value)}
+                          onFocus={() => setShowAdviceDropdown(true)}
+                          onBlur={() => setShowAdviceDropdown(false)}
+                          className="bg-white dark:bg-slate-800 border-none shadow-sm focus-visible:ring-1 focus-visible:ring-rose-500 pr-10"
+                        />
+                        <ChevronDown className="absolute right-3 top-3 w-4 h-4 text-slate-400 pointer-events-none" />
+                      </div>
+                      {showAdviceDropdown && (
+                        <div 
+                          className="absolute top-[100%] left-0 right-0 z-50 max-h-60 overflow-y-auto bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg mt-1"
+                          onMouseDown={e => e.preventDefault()} // Prevents input onBlur
+                        >
+                          {customAdviceOptions
+                            .filter(opt => opt.toLowerCase().includes(adviceSearch.toLowerCase()))
+                            .map(opt => (
+                            <button 
+                              key={opt} 
+                              type="button" 
+                              onClick={() => {
+                                setNotes({...notes, advice: notes.advice ? notes.advice + '\n' + opt : opt});
+                                setShowAdviceDropdown(false);
+                                setAdviceSearch("");
+                              }} 
+                              className="w-full text-left px-4 py-2 hover:bg-rose-50 dark:hover:bg-rose-900/30 text-sm text-slate-700 dark:text-slate-300 border-b border-slate-100 dark:border-slate-700 last:border-0"
+                            >
+                              {opt}
+                            </button>
+                          ))}
+                          {adviceSearch && !customAdviceOptions.some(a => a.toLowerCase() === adviceSearch.toLowerCase()) && (
+                            <button 
+                              type="button" 
+                              onClick={() => {
+                                setCustomAdviceOptions([...customAdviceOptions, adviceSearch]);
+                                setNotes({...notes, advice: notes.advice ? notes.advice + '\n' + adviceSearch : adviceSearch});
+                                setShowAdviceDropdown(false);
+                                setAdviceSearch("");
+                              }} 
+                              className="w-full flex items-center gap-2 text-left px-4 py-2 hover:bg-rose-50 dark:hover:bg-rose-900/30 text-sm text-indigo-600 dark:text-indigo-400 font-medium"
+                            >
+                              <Plus className="w-4 h-4" /> Add "{adviceSearch}"
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
                     <Textarea 
                       value={notes.advice} 
                       onChange={e => setNotes({...notes, advice: e.target.value})} 
-                      className="h-48 resize-none bg-white dark:bg-slate-800 border-none shadow-sm focus-visible:ring-1 focus-visible:ring-rose-500" 
-                      placeholder="Search — water, rest, diet..."
+                      className="h-32 resize-none bg-white dark:bg-slate-800 border-none shadow-sm focus-visible:ring-1 focus-visible:ring-rose-500" 
+                      placeholder="Selected advice will appear here..."
                     />
                   </div>
                 </div>

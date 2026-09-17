@@ -23,6 +23,7 @@ export function SearchableSelect({
   options,
   value,
   onChange,
+  onInputChange,
   placeholder = "Select an option...",
   emptyMessage = "No option found.",
   className
@@ -30,6 +31,7 @@ export function SearchableSelect({
   options: { value: string; label: string }[]
   value: string
   onChange: (value: string) => void
+  onInputChange?: (value: string) => void
   placeholder?: string
   emptyMessage?: string
   className?: string
@@ -60,7 +62,7 @@ export function SearchableSelect({
       </PopoverTrigger>
       <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
         <Command>
-          <CommandInput placeholder={`Search...`} />
+          <CommandInput placeholder={`Search...`} onValueChange={onInputChange} />
           <CommandList>
             <CommandEmpty>{emptyMessage}</CommandEmpty>
             <CommandGroup>
